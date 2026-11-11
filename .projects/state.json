@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "providers": {
+    "channel3": {
+      "name": "Channel3"
+    },
+    "exa": {
+      "name": "Exa"
+    },
+    "turso": {
+      "name": "Turso"
+    }
+  },
+  "resources": {
+    "channel3-api": {
+      "livemode": true,
+      "name": "channel3-api",
+      "providerName": "Channel3",
+      "serviceId": "api"
+    },
+    "channel3-plan": {
+      "livemode": true,
+      "name": "channel3-plan",
+      "providerName": "Channel3",
+      "serviceId": "free"
+    },
+    "db": {
+      "livemode": true,
+      "name": "db",
+      "providerName": "Turso",
+      "serviceId": "database"
+    },
+    "exa-api": {
+      "livemode": true,
+      "name": "exa-api",
+      "providerName": "Exa",
+      "serviceId": "api"
+    },
+    "exa-plan": {
+      "livemode": true,
+      "name": "exa-plan",
+      "providerName": "Exa",
+      "serviceId": "free"
+    },
+    "turso-plan": {
+      "livemode": true,
+      "name": "turso-plan",
+      "providerName": "Turso",
+      "serviceId": "starter"
+    }
+  }
+}

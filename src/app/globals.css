@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #f6efe3;
+  --paper: #fffaf1;
+  --ink: #2b2118;
+  --muted: #7a6a58;
+  --line: #e6d9c4;
+  --tomato: #d9472b;
+  --herb: #4f7a3a;
+  --butter: #f2c14e;
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-tomato: var(--tomato);
+  --color-herb: var(--herb);
+  --color-butter: var(--butter);
+  --font-sans: var(--font-geist-sans);
+  --font-display: var(--font-display);
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, var(--line) 25%, var(--paper) 50%, var(--line) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
