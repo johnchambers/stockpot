@@ -155,3 +155,73 @@ Stockpot doubles as a **paid agent API**: agents pay per call over HTTP with the
 - **Chat interface**: `mcp/stockpot-mcp.mjs` exposes `scan_kitchen`, `whats_for_dinner`, `find_groceries`, `pantry_status`; pays via `mppx` CLI with keychain wallet `stockpot-agent` (no private key in process). Registered for Claude Code in `.mcp.json`.
 
 Demo line: "Claude paid 17 cents to scan my fridge, plan dinner and find feta at a deli in Herne Hill, with no checkout and no API key."
+
+---
+
+## NEXT (not started, awaiting review): "Plan my week", the decentralised HelloFresh moment
+
+**Goal:** one paid call (and one chat message to Claude) returns a full family week: 7 dinners, recipes, one de-duplicated shopping list, and where to buy it locally, grouped by shop with a rough cost.
+
+> "Here's my fridge. Plan dinners for 4 this week, one vegetarian, under £80, near Herne Hill."
+> → ~30–60s, one MPP payment (~$0.35), full week + list + shops.
+
+### API: `POST /api/agent/week` (paid, proposed $0.35)
+**Input**
+```jsonc
+{
+  "household": "basil-fig-…",        // OR "image" (+ "location"), a fridge photo to scan first
+  "people": "2 adults, 2 kids, one vegetarian, nut allergy",
+  "servings": 4,                      // optional; derived from `people` if omitted
+  "budget": { "amount": 80, "currency": "GBP" },
+  "place": "Herne Hill, London",
+  "nights": 7,                        // optional, 3–7
+  "constraints": "weeknights ≤ 30 min" // optional
+}
+```
+**Output**
+1. `days[7]`: { day, title, minutes, servings, uses_from_kitchen[], expiring_used[], feeds: "veg-friendly; nut-free", steps[] }
+2. `shopping_list[]`: { item, quantity, unit, for_days[], aisle }, minus what's already in the kitchen; ingredients shared across meals (e.g. one bag of spinach for Mon + Thu)
+3. `shops[]`: { name, type (grocer|market|butcher|deli|bakery), address/note, url, items[], est_cost }, grouped by shop
+4. `budget`: { estimated_total, currency, within_budget, note }
+5. `coverage`: per-person notes (which nights suit the vegetarian, allergy check), with a note that cost estimates are approximate
+
+### Pipeline (reuses existing logic)
+1. **Inventory:** `listItems(household)`, or `scanPhoto(image)` if a photo is sent (and save to the household if both are given).
+2. **Plan:** one structured LLM call (`generateText` + `Output.object`) creates 7 dinners, scaled servings, expiring-first, dietary/allergy rules, ingredient reuse across days. Allergy rule enforced in the prompt **and** checked after (reject/regenerate a meal that lists a banned ingredient).
+3. **Consolidate list:** in code: merge duplicate ingredients across days, subtract inventory, group by aisle.
+4. **Source locally:** a shopping-agent variant that searches **by shop type** ("greengrocer near Herne Hill", "butcher…", "deli…") with Exa, not per item. That's about 4–6 searches instead of 20+, so it stays inside the time budget. It assigns list items to shops and estimates cost per shop. Channel3 is only used for hard-to-find items.
+5. **Respond** with receipt; optionally save the plan to the household (`plans` table) so the family app shows "This week" too.
+
+### Surfaces
+- **Paid route** `/api/agent/week` + entry in `/openapi.json` (x-payment-info) + `/llms.txt`
+- **MCP tool** `plan_my_week` in `mcp/stockpot-mcp.mjs` (accepts image path or household); returns a readable week, list and shops, plus "💳 Paid $0.35"
+- **(Optional) app tab** "Week" that shows a saved plan for the household (read-only; free)
+
+### Technical notes
+- `export const maxDuration = 300` (Vercel default limit is 300s; target 30–60s). Run the plan call and the shop-type searches partly in parallel where possible.
+- MCP: raise the `mppx` subprocess timeout to ~240s.
+- Re-run `npx mppx validate` with a `/api/agent/week` body; target is still 0 fail / 0 warn.
+- Cost per call: ~2–3 Haiku calls + ~5 Exa searches, comfortably under the $0.35 price.
+
+### Caveats (say these in the demo)
+- No real orders are placed with local shops; the agent finds them and links to them.
+- Prices and budget are **estimates**; LLM + web search, not live shop prices.
+- Allergy handling is best-effort, not medical advice; show a note.
+
+### Pitch / future (beyond hackathon)
+Stockpot plans; many local sellers fulfil, instead of one HelloFresh warehouse. Next: local shops publish **their own MPP endpoints** (stock check / reserve / order), so the Stockpot agent pays them directly in the same request. That would make Stockpot an MPP buyer as well as a seller.
+
+### Build estimate: ~45–60 min
+| Step | Time |
+|---|---|
+| Week schema + planning prompt + allergy check | 15 min |
+| List consolidation + shop-type sourcing | 15 min |
+| Paid route, discovery, llms.txt, validate | 10 min |
+| MCP `plan_my_week` + end-to-end test from chat | 10 min |
+| (Optional) "Week" tab in app | 10–15 min |
+
+### Open questions for review
+1. Price: **$0.25**, **$0.35** (proposed) or **$0.50**?
+2. Save plans to the household and show them in the app, or chat/API only?
+3. Currency: infer from `place` (London → GBP) or always require it in `budget`?
+4. Nights fixed at 7, or allow 3–7?

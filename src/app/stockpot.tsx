@@ -89,6 +89,13 @@ export default function Stockpot({ household }: { household: string }) {
 
   const [scans, setScans] = useState<Scan[]>([]);
   const [shared, setShared] = useState(false);
+  const [pair, setPair] = useState<{ code: string; expires_at: string } | "loading" | null>(null);
+
+  async function connectClaude() {
+    setPair("loading");
+    const r = await fetch(api("/api/pair"), { method: "POST" });
+    setPair(r.ok ? await r.json() : null);
+  }
 
   const refresh = useCallback(async () => {
     const [ri, rs] = await Promise.all([fetch(api("/api/items")), fetch(api("/api/scans"))]);
@@ -138,9 +145,31 @@ export default function Stockpot({ household }: { household: string }) {
           <button onClick={share} className="rounded-full bg-ink px-3 py-1.5 text-xs font-medium text-cream">
             {shared ? "Link copied ✓" : "👨‍👩‍👧 Share with family"}
           </button>
-          <span className="text-xs text-muted">{items.filter((i) => i.status !== "out").length} items</span>
+          <button onClick={connectClaude} className="rounded-full border border-ink/20 px-3 py-1.5 text-xs font-medium">
+            ✳️ Connect Claude
+          </button>
+          <a href={`/h/${household}/tonight`} className="text-xs font-medium text-tomato">
+            Tonight’s dinner →
+          </a>
         </div>
       </header>
+
+      {pair && (
+        <div className="mb-5 rounded-2xl bg-ink p-4 text-cream">
+          {pair === "loading" ? (
+            <p className="text-sm">Getting a code…</p>
+          ) : (
+            <>
+              <p className="text-sm">Tell Claude this code to connect it to your family kitchen:</p>
+              <p className="my-2 font-mono text-3xl font-semibold tracking-[0.2em]">{pair.code}</p>
+              <p className="text-xs text-cream/70">
+                Works once, for 10 minutes. Anyone with it can see and change your kitchen.{" "}
+                <button onClick={() => setPair(null)} className="underline">Done</button>
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       {tab === "scan" && <ScanTab onSaved={(next) => { refresh(); if (next) setTab("pantry"); }} />}
       {tab === "pantry" && <PantryTab items={items} scans={scans} setItems={setItems} goScan={() => setTab("scan")} />}

@@ -24,11 +24,12 @@ export const mppx = Mppx.create({
   realm: process.env.MPP_REALM ?? "stockpot-ten.vercel.app",
 });
 
-export const PRICES = { scan: "0.05", recipes: "0.02", shop: "0.10" } as const;
+export const PRICES = { scan: "0.05", recipes: "0.02", shop: "0.10", dish: "0.03" } as const;
 
 export const chargeScan = mppx.charge({ amount: PRICES.scan, description: "Stockpot: scan a fridge/pantry photo into a food inventory" });
 export const chargeRecipes = mppx.charge({ amount: PRICES.recipes, description: "Stockpot: 3 dinners from an inventory, prioritising what expires soonest" });
 export const chargeShop = mppx.charge({ amount: PRICES.shop, description: "Stockpot: agent finds missing groceries at local shops and online" });
+export const chargeDish = mppx.charge({ amount: PRICES.dish, description: "Stockpot: AI photo of tonight's dinner and a shareable 'tonight' page for the family" });
 
 type Handler = (req: Request) => Promise<Response> | Response;
 

@@ -5,6 +5,9 @@ const openrouter = createOpenRouter({ apiKey: (process.env.OPENROUTER_API_KEY ??
 /** One cheap model that handles vision, structured output and tool calls. Override with STOCKPOT_MODEL. */
 export const model = openrouter(process.env.STOCKPOT_MODEL ?? "anthropic/claude-haiku-5.5");
 
+/** Fast, good-looking food photography (~7s). Override with STOCKPOT_IMAGE_MODEL. */
+export const imageModel = openrouter.imageModel(process.env.STOCKPOT_IMAGE_MODEL ?? "black-forest-labs/flux-3-image-klein");
+
 export const today = () => new Date().toISOString().slice(0, 10);
 
 /** Wrap an AI route so failures come back as `{ error }` JSON the UI can show, not an empty 500. */

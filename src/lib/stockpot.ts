@@ -1,10 +1,10 @@
-import { generateText, isStepCount, Output, tool } from "ai";
+import { generateImage, generateText, isStepCount, Output, tool } from "ai";
 import Exa from "exa-js";
 import { z } from "zod";
-import { model, today } from "@/lib/ai";
+import { imageModel, model, today } from "@/lib/ai";
 import type { Item, Location, ScannedItem } from "@/lib/db";
 
-/* Core Stockpot capabilities, shared by the family app (free) and the MPP agent API (paid). */
+/* Core Stockpot capabilities, shared by the family app (free) and the MPP agent API (paid), incl. dish photos and shop maps. */
 
 const ScanSchema = z.object({
   items: z.array(
@@ -109,7 +109,12 @@ const BasketSchema = z.object({
     z.object({
       item: z.string(),
       local: z
-        .object({ store: z.string(), note: z.string().describe("e.g. address, opening hours, or why it's a good pick"), url: z.string() })
+        .object({
+          store: z.string(),
+          address: z.string().nullable().describe("Street address with postcode if the search results give one, e.g. '284 Milkwood Rd, London SE24 0EZ'. null if unknown; never invent one."),
+          note: z.string().describe("e.g. opening hours, or why it's a good pick"),
+          url: z.string(),
+        })
         .nullable(),
       online: z
         .object({ title: z.string(), store: z.string(), price: z.number().nullable(), url: z.string(), image: z.string().nullable() })
@@ -150,4 +155,53 @@ Batch your tool calls in parallel where possible. Never invent URLs: only use UR
 Then return the basket.`,
   });
   return { ...output, toolCalls: steps.flatMap((s) => s.toolCalls).length };
+}
+
+export type DishRecipe = { title: string; uses?: { name: string }[]; missing?: string[] };
+
+/** AI photo of the finished dish, as a JPEG data URL. */
+export async function dishPhoto(recipe: DishRecipe): Promise<string> {
+  const ingredients = [...(recipe.uses ?? []).map((u) => u.name), ...(recipe.missing ?? [])].slice(0, 10).join(", ");
+  const { image } = await generateImage({
+    model: imageModel,
+    aspectRatio: "4:3",
+    prompt: `Overhead editorial food photograph of a home-cooked "${recipe.title}"${ingredients ? `, made with ${ingredients}` : ""}. Plated on a speckled ceramic plate on a rustic wooden table, linen napkin, natural window light, appetising, realistic home cooking. No text, no hands, no logos.`,
+  });
+  return `data:${image.mediaType};base64,${image.base64}`;
+}
+
+export type Pin = { name: string; lat: number; lng: number; kind: "home" | "shop" };
+
+/**
+ * Address or place → coordinates via OpenStreetMap Nominatim (free; max 1 request/second, so callers
+ * go one at a time). Returns null when nothing matches.
+ */
+export async function geocode(query: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`, {
+      headers: { "user-agent": "Stockpot/1.0 (https://stockpot-ten.vercel.app)", "accept-language": "en" },
+    });
+    const [hit] = (await r.json()) as { lat: string; lon: string }[];
+    return hit ? { lat: Number(hit.lat), lng: Number(hit.lon) } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Pins for the "tonight" map: the user's area plus each distinct local shop that has an address. */
+export async function mapPins(place: string, shops: { store: string; address: string | null }[]): Promise<Pin[]> {
+  const pins: Pin[] = [];
+  const pause = () => new Promise((r) => setTimeout(r, 1100));
+  const home = await geocode(place);
+  if (home) pins.push({ name: place, ...home, kind: "home" });
+  const seen = new Set<string>();
+  for (const s of shops) {
+    if (!s.address || seen.has(s.store)) continue;
+    seen.add(s.store);
+    await pause();
+    const at = (await geocode(s.address)) ?? (await pause().then(() => geocode(`${s.store}, ${place}`)));
+    // Drop matches that landed far away (wrong town with the same street name).
+    if (at && (!home || Math.hypot(at.lat - home.lat, (at.lng - home.lng) * 0.6) < 0.08)) pins.push({ name: s.store, ...at, kind: "shop" });
+  }
+  return pins;
 }
