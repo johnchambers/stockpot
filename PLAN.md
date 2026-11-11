@@ -129,8 +129,10 @@ upgrade card. About 5 minutes.
 - [x] Services: Turso `db` (starter, aws-us-east-1), Channel3 `channel3-api` (free), Exa `exa-api` (free), Vercel `vercel-project` (hobby)
 - [x] App: scan, kitchen inventory, cook tonight, shopping list, shopping agent (`/api/scan`, `/api/items`, `/api/recipes`, `/api/shop`)
 - [x] GitHub: private repo `johnchambers/stockpot`; Vercel env vars set; deployed to https://stockpot-ten.vercel.app
-- [ ] OpenRouter: blocked on `stripe projects billing add`, then `stripe projects add openrouter/pay_as_you_go` + `openrouter/api`, copy `OPENROUTER_API_KEY` to Vercel, redeploy
-- [ ] End-to-end test with real photos
+- [x] OpenRouter: Stripe-provisioned pay-as-you-go account never received credits; using a personal key stored as Stripe Projects variable `openrouter-key` → `OPENROUTER_API_KEY`
+- [x] End-to-end test: scan 15s, recipes 10s, shopping agent 15s (Claude Haiku 5.5)
+- [x] Family sharing: `/h/<household-id>` links, Share button, items + scans scoped per household
+- [x] Scan history: photos saved in Turso `scans` table, thumbnails on Kitchen tab
 - [ ] Stripe Pro upsell (Payment Link)
 - Model: `anthropic/claude-haiku-5.5` via OpenRouter (override with `STOCKPOT_MODEL`)
 - Local dev runs on http://localhost:3002 (port 3000 is taken by another app)

@@ -1,10 +1,25 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-// The app keeps per-device state in localStorage, so render it client-side only.
-const Stockpot = dynamic(() => import("./stockpot"), { ssr: false });
+const WORDS = ["basil", "thyme", "mango", "olive", "pepper", "lemon", "clove", "ginger", "fig", "sage", "plum", "kale"];
 
-export default function Page() {
-  return <Stockpot />;
+function newHouseholdId() {
+  const pick = () => WORDS[crypto.getRandomValues(new Uint32Array(1))[0] % WORDS.length];
+  const tail = Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("");
+  return `${pick()}-${pick()}-${tail}`;
+}
+
+/** "/" sends you to your household: the last one you opened on this device, or a brand-new one. */
+export default function Home() {
+  const router = useRouter();
+  useEffect(() => {
+    let h: string | null = null;
+    try {
+      h = localStorage.getItem("sp-household");
+    } catch {}
+    router.replace(`/h/${h ?? newHouseholdId()}`);
+  }, [router]);
+  return <div className="p-8 text-center text-muted">Opening your kitchen…</div>;
 }

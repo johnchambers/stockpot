@@ -31,6 +31,10 @@ type Basket = {
   toolCalls: number;
 };
 type Tab = "scan" | "pantry" | "cook" | "shop";
+type Scan = { id: string; location: Location; image: string; item_count: number; created_at: string };
+
+// Every API call is scoped to the household in the URL (/h/<id>). Client-only, so window is safe.
+const api = (path: string) => `${path}?h=${encodeURIComponent(window.location.pathname.split("/")[2] ?? "")}`;
 
 const LOCATIONS: { id: Location; label: string; emoji: string }[] = [
   { id: "fridge", label: "Fridge", emoji: "🧊" },
@@ -76,25 +80,44 @@ function save(key: string, v: unknown) {
   } catch {}
 }
 
-export default function Stockpot() {
+export default function Stockpot({ household }: { household: string }) {
   const [tab, setTab] = useState<Tab>("scan");
   const [items, setItems] = useState<Item[]>([]);
   // Client-only component (see page.tsx), so localStorage is safe in initialisers.
-  const [extras, setExtras] = useState<string[]>(() => load("sp-extras", [])); // shopping-list additions from recipes
-  const [checked, setChecked] = useState<string[]>(() => load("sp-checked", []));
+  const [extras, setExtras] = useState<string[]>(() => load(`sp-extras-${household}`, [])); // shopping-list additions from recipes
+  const [checked, setChecked] = useState<string[]>(() => load(`sp-checked-${household}`, []));
+
+  const [scans, setScans] = useState<Scan[]>([]);
+  const [shared, setShared] = useState(false);
 
   const refresh = useCallback(async () => {
-    const r = await fetch("/api/items");
-    if (r.ok) setItems((await r.json()).items);
+    const [ri, rs] = await Promise.all([fetch(api("/api/items")), fetch(api("/api/scans"))]);
+    if (ri.ok) setItems((await ri.json()).items);
+    if (rs.ok) setScans((await rs.json()).scans);
   }, []);
 
   useEffect(() => {
-    fetch("/api/items")
+    fetch(api("/api/items"))
       .then((r) => (r.ok ? r.json() : { items: [] }))
       .then((d) => setItems(d.items));
+    fetch(api("/api/scans"))
+      .then((r) => (r.ok ? r.json() : { scans: [] }))
+      .then((d) => setScans(d.scans));
   }, []);
-  useEffect(() => save("sp-extras", extras), [extras]);
-  useEffect(() => save("sp-checked", checked), [checked]);
+
+  async function share() {
+    const url = `${location.origin}/h/${household}`;
+    try {
+      if (navigator.share) await navigator.share({ title: "Our Stockpot kitchen", text: "Join our family kitchen on Stockpot", url });
+      else {
+        await navigator.clipboard.writeText(url);
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
+      }
+    } catch {}
+  }
+  useEffect(() => save(`sp-extras-${household}`, extras), [extras, household]);
+  useEffect(() => save(`sp-checked-${household}`, checked), [checked, household]);
 
   const shoppingList = useMemo(() => {
     const fromInventory = items.filter((i) => i.status !== "have").map((i) => i.name);
@@ -111,13 +134,16 @@ export default function Stockpot() {
           </h1>
           <p className="text-sm text-muted">Raid your own kitchen before you go shopping.</p>
         </div>
-        <span className="rounded-full bg-paper px-3 py-1 text-xs text-muted ring-1 ring-line">
-          {items.filter((i) => i.status !== "out").length} items
-        </span>
+        <div className="flex flex-col items-end gap-1.5">
+          <button onClick={share} className="rounded-full bg-ink px-3 py-1.5 text-xs font-medium text-cream">
+            {shared ? "Link copied ✓" : "👨‍👩‍👧 Share with family"}
+          </button>
+          <span className="text-xs text-muted">{items.filter((i) => i.status !== "out").length} items</span>
+        </div>
       </header>
 
       {tab === "scan" && <ScanTab onSaved={(next) => { refresh(); if (next) setTab("pantry"); }} />}
-      {tab === "pantry" && <PantryTab items={items} setItems={setItems} goScan={() => setTab("scan")} />}
+      {tab === "pantry" && <PantryTab items={items} scans={scans} setItems={setItems} goScan={() => setTab("scan")} />}
       {tab === "cook" && (
         <CookTab
           hasItems={items.length > 0}
@@ -176,7 +202,7 @@ function ScanTab({ onSaved }: { onSaved: (goToPantry: boolean) => void }) {
     setPreview(image);
     setBusy(true);
     try {
-      const r = await fetch("/api/scan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ image, location }) });
+      const r = await fetch(api("/api/scan"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ image, location }) });
       const data = (await readJson(r)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
       if (!r.ok) throw new Error(data.error ?? "Scan failed");
       setResult(data);
@@ -255,14 +281,43 @@ function ScanTab({ onSaved }: { onSaved: (goToPantry: boolean) => void }) {
 
 /* ───────────────────────── Pantry ───────────────────────── */
 
-function PantryTab({ items, setItems, goScan }: { items: Item[]; setItems: (i: Item[]) => void; goScan: () => void }) {
+function ScanHistory({ scans }: { scans: Scan[] }) {
+  const [open, setOpen] = useState<Scan | null>(null);
+  if (scans.length === 0) return null;
+  const when = (d: string) =>
+    new Date(d).toLocaleString(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
+  return (
+    <div>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">📷 Recent scans</p>
+      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+        {scans.map((s) => (
+          <button key={s.id} onClick={() => setOpen(s)} className="w-28 shrink-0 text-left">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={s.image} alt={`${s.location} scan`} className="aspect-[4/3] w-full rounded-xl object-cover ring-1 ring-line" />
+            <p className="mt-1 text-xs font-medium capitalize">{s.location}</p>
+            <p className="text-[11px] text-muted">{s.item_count} items · {when(s.created_at)}</p>
+          </button>
+        ))}
+      </div>
+      {open && (
+        <button onClick={() => setOpen(null)} className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-ink/90 p-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={open.image} alt="" className="max-h-[75dvh] max-w-full rounded-2xl" />
+          <p className="text-sm text-cream capitalize">{open.location} · {new Date(open.created_at).toLocaleString()} · tap to close</p>
+        </button>
+      )}
+    </div>
+  );
+}
+
+function PantryTab({ items, scans, setItems, goScan }: { items: Item[]; scans: Scan[]; setItems: (i: Item[]) => void; goScan: () => void }) {
   const live = items.filter((i) => i.status !== "out");
   const soon = live
     .filter((i) => { const d = daysUntil(i.est_expiry); return d != null && d <= 3; })
     .sort((a, b) => (a.est_expiry ?? "").localeCompare(b.est_expiry ?? ""));
 
   async function patch(body: object) {
-    const r = await fetch("/api/items", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const r = await fetch(api("/api/items"), { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
     if (r.ok) setItems((await r.json()).items);
   }
 
@@ -278,6 +333,7 @@ function PantryTab({ items, setItems, goScan }: { items: Item[]; setItems: (i: I
 
   return (
     <section className="space-y-5">
+      <ScanHistory scans={scans} />
       {soon.length > 0 && (
         <div className="rounded-3xl bg-butter/30 p-4 ring-1 ring-butter">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink/70">⏰ Use soon</p>
@@ -340,7 +396,7 @@ function CookTab({ hasItems, addToList }: { hasItems: boolean; addToList: (names
     setBusy(true);
     setError(null);
     try {
-      const r = await fetch("/api/recipes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ constraints }) });
+      const r = await fetch(api("/api/recipes"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ constraints }) });
       const data = (await readJson(r)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
       if (!r.ok) throw new Error(data.error ?? "Couldn't think of anything");
       setRecipes(data.recipes);
@@ -429,7 +485,7 @@ function ShopTab({ list, checked, toggle, clearExtras }: { list: string[]; check
     setError(null);
     setBasket(null);
     try {
-      const r = await fetch("/api/shop", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ items: todo, place }) });
+      const r = await fetch(api("/api/shop"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ items: todo, place }) });
       const data = (await readJson(r)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
       if (!r.ok) throw new Error(data.error ?? "Agent failed");
       setBasket(data);
