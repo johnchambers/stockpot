@@ -5,7 +5,7 @@ export function GET() {
 
 > Stockpot turns photos of a family's fridge and cupboards into a food inventory, suggests dinners that use up what's expiring, and finds missing groceries at local shops. Agents pay per call with the Machine Payments Protocol (MPP), with no API key or account. Payments use Tempo testnet.
 
-Builder: John Chambers
+Builder: ${process.env.STOCKPOT_BUILDER ?? "Stockpot team"}
 Discovery: https://stockpot-ten.vercel.app/openapi.json
 
 ## Paid endpoints (MPP: expect HTTP 402, pay, retry with credential, get result + Payment-Receipt)
