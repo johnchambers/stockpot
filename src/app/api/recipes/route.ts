@@ -1,6 +1,6 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { model, today } from "@/lib/ai";
+import { aiRoute, model, today } from "@/lib/ai";
 import { listItems } from "@/lib/db";
 
 export const maxDuration = 60;
@@ -20,7 +20,7 @@ const RecipesSchema = z.object({
     .length(3),
 });
 
-export async function POST(req: Request) {
+export const POST = aiRoute(async (req: Request) => {
   const { constraints } = (await req.json().catch(() => ({}))) as { constraints?: string };
   const items = (await listItems()).filter((i) => i.status !== "out");
   if (items.length === 0) return Response.json({ error: "Scan something first." }, { status: 400 });
@@ -41,4 +41,4 @@ ${inventory}`,
   });
 
   return Response.json(output);
-}
+});

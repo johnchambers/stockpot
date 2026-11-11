@@ -53,6 +53,15 @@ async function resizeToDataUrl(file: File, max = 1024): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.8);
 }
 
+async function readJson(r: Response): Promise<{ error?: string } & Record<string, unknown>> {
+  const text = await r.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: `Server error (${r.status})` };
+  }
+}
+
 function load<T>(key: string, fallback: T): T {
   try {
     const v = localStorage.getItem(key);
@@ -168,7 +177,7 @@ function ScanTab({ onSaved }: { onSaved: (goToPantry: boolean) => void }) {
     setBusy(true);
     try {
       const r = await fetch("/api/scan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ image, location }) });
-      const data = await r.json();
+      const data = (await readJson(r)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
       if (!r.ok) throw new Error(data.error ?? "Scan failed");
       setResult(data);
       onSaved(false);
@@ -332,7 +341,7 @@ function CookTab({ hasItems, addToList }: { hasItems: boolean; addToList: (names
     setError(null);
     try {
       const r = await fetch("/api/recipes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ constraints }) });
-      const data = await r.json();
+      const data = (await readJson(r)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
       if (!r.ok) throw new Error(data.error ?? "Couldn't think of anything");
       setRecipes(data.recipes);
     } catch (e) {
@@ -421,7 +430,7 @@ function ShopTab({ list, checked, toggle, clearExtras }: { list: string[]; check
     setBasket(null);
     try {
       const r = await fetch("/api/shop", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ items: todo, place }) });
-      const data = await r.json();
+      const data = (await readJson(r)) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
       if (!r.ok) throw new Error(data.error ?? "Agent failed");
       setBasket(data);
     } catch (e) {

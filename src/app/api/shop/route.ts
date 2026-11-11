@@ -1,7 +1,7 @@
 import { generateText, isStepCount, Output, tool } from "ai";
 import Exa from "exa-js";
 import { z } from "zod";
-import { model } from "@/lib/ai";
+import { aiRoute, model } from "@/lib/ai";
 
 export const maxDuration = 120;
 
@@ -50,7 +50,7 @@ const BasketSchema = z.object({
   summary: z.string().describe("1–2 sentences: where to go and an estimated online total."),
 });
 
-export async function POST(req: Request) {
+export const POST = aiRoute(async (req: Request) => {
   const { items, place } = (await req.json()) as { items: string[]; place: string };
   if (!items?.length) return Response.json({ error: "Nothing to shop for." }, { status: 400 });
 
@@ -84,4 +84,4 @@ Then return the basket.`,
   });
 
   return Response.json({ ...output, toolCalls: steps.flatMap((s) => s.toolCalls).length });
-}
+});

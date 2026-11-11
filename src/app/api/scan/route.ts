@@ -1,6 +1,6 @@
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { model } from "@/lib/ai";
+import { aiRoute, model } from "@/lib/ai";
 import { LOCATIONS, replaceLocation } from "@/lib/db";
 
 export const maxDuration = 60;
@@ -17,7 +17,7 @@ const ScanSchema = z.object({
   ),
 });
 
-export async function POST(req: Request) {
+export const POST = aiRoute(async (req: Request) => {
   const { image, location } = (await req.json()) as { image: string; location: string };
   if (!image?.startsWith("data:image/")) return Response.json({ error: "Expected an image data URL" }, { status: 400 });
   if (!LOCATIONS.includes(location as never)) return Response.json({ error: "Unknown location" }, { status: 400 });
@@ -41,4 +41,4 @@ export async function POST(req: Request) {
 
   const diff = await replaceLocation(location as (typeof LOCATIONS)[number], output.items);
   return Response.json({ items: output.items, diff });
-}
+});
