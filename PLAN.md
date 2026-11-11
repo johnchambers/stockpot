@@ -124,3 +124,13 @@ upgrade card. About 5 minutes.
 | Photo too large for a Vercel function | Resize client-side to ≤1024px JPEG |
 | Vercel service needs a Git repo | Create a GitHub repo early, or fall back to `vercel deploy` from the CLI |
 | Bad venue Wi-Fi during the demo | Pre-scan inventory beforehand and keep demo photos on the phone |
+
+## Progress log
+- [x] Services: Turso `db` (starter, aws-us-east-1), Channel3 `channel3-api` (free), Exa `exa-api` (free), Vercel `vercel-project` (hobby)
+- [x] App: scan, kitchen inventory, cook tonight, shopping list, shopping agent (`/api/scan`, `/api/items`, `/api/recipes`, `/api/shop`)
+- [x] GitHub: private repo `johnchambers/stockpot`; Vercel env vars set; deployed to https://stockpot-ten.vercel.app
+- [ ] OpenRouter: blocked on `stripe projects billing add`, then `stripe projects add openrouter/pay_as_you_go` + `openrouter/api`, copy `OPENROUTER_API_KEY` to Vercel, redeploy
+- [ ] End-to-end test with real photos
+- [ ] Stripe Pro upsell (Payment Link)
+- Model: `anthropic/claude-haiku-5.5` via OpenRouter (override with `STOCKPOT_MODEL`)
+- Local dev runs on http://localhost:3002 (port 3000 is taken by another app)

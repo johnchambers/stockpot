@@ -9,6 +9,9 @@
     },
     "turso": {
       "name": "Turso"
+    },
+    "vercel": {
+      "name": "Vercel"
     }
   },
   "resources": {
@@ -47,6 +50,18 @@
       "name": "turso-plan",
       "providerName": "Turso",
       "serviceId": "starter"
+    },
+    "vercel-plan": {
+      "livemode": true,
+      "name": "vercel-plan",
+      "providerName": "Vercel",
+      "serviceId": "hobby"
+    },
+    "vercel-project": {
+      "livemode": true,
+      "name": "vercel-project",
+      "providerName": "Vercel",
+      "serviceId": "project"
     }
   }
 }
