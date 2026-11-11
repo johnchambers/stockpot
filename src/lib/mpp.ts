@@ -33,22 +33,21 @@ export const chargeShop = mppx.charge({ amount: PRICES.shop, description: "Stock
 type Handler = (req: Request) => Promise<Response> | Response;
 
 /**
- * Gate a handler behind a charge, but reject malformed input *before* the agent pays.
- * Requests without a payment credential always get the 402 challenge (so discovery/validators see it).
+ * Gate a handler behind a charge. The credential is always checked first (MPP semantics: no/malformed
+ * credential → 402 challenge). Input is validated after payment; the request schemas are published in
+ * /openapi.json so well-behaved agents (and our MCP tools) validate before paying.
  */
 export function paid(charge: (h: Handler) => Handler, validate: (body: unknown) => string | null, handler: (body: never, req: Request) => Promise<Response>): Handler {
-  const gated = charge(async (req) => handler((await req.json()) as never, req));
-  return async (req: Request): Promise<Response> => {
-    if (req.headers.get("authorization")?.toLowerCase().startsWith("payment")) {
-      const body = await req.clone().json().catch(() => null);
-      const problem = body == null ? "Body must be JSON." : validate(body);
-      if (problem) return Response.json({ error: problem }, { status: 400 });
-    }
+  const gated = charge(async (req) => {
+    const body = await req.json().catch(() => null);
+    const problem = body == null ? "Body must be JSON. See /openapi.json for the request schema." : validate(body);
+    if (problem) return Response.json({ error: problem, schema: "/openapi.json" }, { status: 400 });
     try {
-      return await gated(req);
+      return await handler(body as never, req);
     } catch (e) {
       console.error(e);
       return Response.json({ error: e instanceof Error ? e.message : "Something went wrong" }, { status: 500 });
     }
-  };
+  });
+  return async (req: Request): Promise<Response> => gated(req);
 }
