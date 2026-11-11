@@ -116,6 +116,14 @@
       ],
       "variables": [
         {
+          "variableName": "mpp-recipient",
+          "envKey": "MPP_RECIPIENT"
+        },
+        {
+          "variableName": "mpp-secret",
+          "envKey": "MPP_SECRET_KEY"
+        },
+        {
           "variableName": "openrouter-key",
           "envKey": "OPENROUTER_API_KEY"
         }
@@ -123,6 +131,14 @@
     }
   },
   "variables": {
+    "mpp-recipient": {
+      "name": "mpp-recipient",
+      "backendId": "fprjvar_61Vk0KhgGGa9PHLCP16Om1czK0GCoUkyHNQXF0QoqW00"
+    },
+    "mpp-secret": {
+      "name": "mpp-secret",
+      "backendId": "fprjvar_61Vk0KdZQZjoRbBUd16Om1czK0GCoUkyHNQXF0QoqXmS"
+    },
     "openrouter-key": {
       "name": "openrouter-key",
       "backendId": "fprjvar_61VjzNc4ddXjrxpkg16Om1czK0GCoUkyHNQXF0Qoq8v2"

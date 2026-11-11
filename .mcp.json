@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "stockpot": {
+      "command": "node",
+      "args": ["mcp/stockpot-mcp.mjs"],
+      "env": { "STOCKPOT_URL": "https://stockpot-ten.vercel.app", "MPPX_ACCOUNT": "stockpot-agent" }
+    }
+  }
+}
