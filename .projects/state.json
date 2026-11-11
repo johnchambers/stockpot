@@ -7,6 +7,9 @@
     "exa": {
       "name": "Exa"
     },
+    "openrouter": {
+      "name": "OpenRouter"
+    },
     "turso": {
       "name": "Turso"
     },
@@ -45,6 +48,18 @@
       "providerName": "Exa",
       "serviceId": "free"
     },
+    "openrouter-api": {
+      "livemode": true,
+      "name": "openrouter-api",
+      "providerName": "OpenRouter",
+      "serviceId": "api"
+    },
+    "openrouter-plan": {
+      "livemode": true,
+      "name": "openrouter-plan",
+      "providerName": "OpenRouter",
+      "serviceId": "pay_as_you_go"
+    },
     "turso-plan": {
       "livemode": true,
       "name": "turso-plan",
@@ -62,6 +77,55 @@
       "name": "vercel-project",
       "providerName": "Vercel",
       "serviceId": "project"
+    }
+  },
+  "environments": {
+    "default": {
+      "output": ".env",
+      "resources": [
+        {
+          "resourceName": "channel3-api"
+        },
+        {
+          "resourceName": "channel3-plan"
+        },
+        {
+          "resourceName": "db"
+        },
+        {
+          "resourceName": "exa-api"
+        },
+        {
+          "resourceName": "exa-plan"
+        },
+        {
+          "resourceName": "openrouter-api"
+        },
+        {
+          "resourceName": "openrouter-plan"
+        },
+        {
+          "resourceName": "turso-plan"
+        },
+        {
+          "resourceName": "vercel-plan"
+        },
+        {
+          "resourceName": "vercel-project"
+        }
+      ],
+      "variables": [
+        {
+          "variableName": "openrouter-key",
+          "envKey": "OPENROUTER_API_KEY"
+        }
+      ]
+    }
+  },
+  "variables": {
+    "openrouter-key": {
+      "name": "openrouter-key",
+      "backendId": "fprjvar_61VjzNc4ddXjrxpkg16Om1czK0GCoUkyHNQXF0Qoq8v2"
     }
   }
 }
